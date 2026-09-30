@@ -18,6 +18,7 @@ Provide entertainment anywhere with enough room.
 git clone https://github.com/BruderJakub/FishRun.git
 cd fishrun
 npm install
+npx expo install expo-sensors expo-screen-orientation @react-native-async-storage/async-storage
 npx expo start
 ```
 

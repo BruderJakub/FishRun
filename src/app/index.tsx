@@ -1,17 +1,20 @@
-import { Text, View, StyleSheet } from "react-native";
+import { router } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
+import GameButton from "../components/GameButton";
 
-export default function Index() {
+export default function Start() {
   return (
     <View style={styles.container}>
-      <Text>Edit src/app/index.tsx to edit this screen.</Text>
+      <Text style={styles.title}>FishRun</Text>
+      <Text style={styles.tag}>Move your phone, move your fish.</Text>
+      <GameButton title="SPIEL STARTEN" onPress={() => router.push("/game")} />
+      <GameButton title="Einstellungen" secondary onPress={() => router.push("/settings")} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  container: { flex: 1, backgroundColor: "#12243A", alignItems: "center", justifyContent: "center", gap: 14 },
+  title: { color: "#fff", fontSize: 44, fontWeight: "bold" },
+  tag: { color: "#DCE6F2", fontStyle: "italic", marginBottom: 20 },
 });
