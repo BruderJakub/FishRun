@@ -8,3 +8,26 @@ The app is directed to rach people that want to do something not very tiring but
 
 ## Function
 Provide entertainment anywhere with enough room.
+
+
+## Runbook – Projekt starten
+
+**Voraussetzungen:** [Node.js](https://nodejs.org) (LTS), Git und die App **Expo Go** auf dem Handy (App Store / Play Store).
+
+```bash
+git clone https://github.com/BruderJakub/FishRun.git
+cd fishrun
+npm install
+npx expo start
+```
+
+Dann den QR-Code im Terminal scannen:
+- **Android:** mit der Expo-Go-App
+- **iOS:** mit der Kamera-App, sie öffnet Expo Go
+
+Handy und PC müssen im selben WLAN sein.
+
+**Weitere Befehle:**
+- `npm start`: dasselbe wie `npx expo start`
+- `npm run android` / `npm run ios`: im Emulator/Simulator starten
+- `npx expo start -c`: Start mit geleertem Cache, falls etwas hängt 
