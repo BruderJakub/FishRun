@@ -25,7 +25,9 @@ export type MotionEvent = "jump" | "duck";
 
 export type Settings = {
   sensitivity: number; // 0.5 - 2.0
-  motion: boolean;     // Motion Control an/aus
+  touch: boolean;      // Touch-Steuerung
+  motion: boolean;     // Bewegungssteuerung
+  voiceHints: boolean; // Blind-Modus: Sprachhinweise
   sound: boolean;      // folgt später
   vibration: boolean;
 };

@@ -3,7 +3,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useState 
 import { Settings } from "../lib/types";
 
 const KEY = "fishrun:data";
-const DEFAULT_SETTINGS: Settings = { sensitivity: 1, motion: true, sound: true, vibration: true };
+const DEFAULT_SETTINGS: Settings = { sensitivity: 1, touch: true, motion: true, voiceHints: false, sound: true, vibration: true };
 
 type GameContextType = {
   highScore: number;

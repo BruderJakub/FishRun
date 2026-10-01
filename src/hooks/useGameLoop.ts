@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { fishHitbox, obstacleHitbox, ObstacleKind, overlaps } from "../lib/gameLogic";
+import { FISH_X, fishHitbox, obstacleHitbox, ObstacleKind, overlaps } from "../lib/gameLogic";
 
 const GRAVITY = 1500;
 const JUMP_VELOCITY = 650;
 const START_SPEED = 300;
 const MAX_DELTA = 0.05; // one long frame must not teleport anything
+const LEAD_S = 1.1;     // voice hint comes this many seconds before the obstacle reaches the fish
 
-export default function useGameLoop(screenWidth: number) {
+type Obst = { x: number; kind: ObstacleKind; warned: boolean };
+
+export default function useGameLoop(screenWidth: number, onWarn?: (kind: ObstacleKind) => void) {
   const [, setTick] = useState(0);
   const [isDucking, setIsDucking] = useState(false);
   const [gameOver, setGameOver] = useState(false);
@@ -14,6 +17,8 @@ export default function useGameLoop(screenWidth: number) {
 
   const widthRef = useRef(screenWidth);
   widthRef.current = screenWidth;
+  const warnRef = useRef(onWarn);
+  warnRef.current = onWarn;
 
   const speed = useRef(START_SPEED);
   const score = useRef(0);
@@ -22,7 +27,7 @@ export default function useGameLoop(screenWidth: number) {
   const ducking = useRef(false);
   const bgScroll = useRef(0);
   const floorScroll = useRef(0);
-  const obstacle = useRef<{ x: number; kind: ObstacleKind }>({ x: 1000, kind: "ground" });
+  const obstacle = useRef<Obst>({ x: 1000, kind: "ground", warned: false });
 
   const jump = () => {
     if (!gameOver && !paused && fishY.current === 0) velocityY.current = JUMP_VELOCITY;
@@ -40,7 +45,7 @@ export default function useGameLoop(screenWidth: number) {
   };
 
   const resetGame = () => {
-    obstacle.current = { x: widthRef.current + 80, kind: "ground" };
+    obstacle.current = { x: widthRef.current + 80, kind: "ground", warned: false };
     fishY.current = 0;
     velocityY.current = 0;
     speed.current = START_SPEED;
@@ -69,6 +74,7 @@ export default function useGameLoop(screenWidth: number) {
         obstacle.current = {
           x: widthRef.current + 80 + Math.random() * 200,
           kind: Math.random() < 0.5 ? "ground" : "overhead",
+          warned: false,
         };
       }
 
@@ -80,6 +86,14 @@ export default function useGameLoop(screenWidth: number) {
       }
 
       const o = obstacle.current;
+
+      // voice hint: once per obstacle, LEAD_S seconds before it reaches the fish
+      const gap = o.x - (FISH_X + 85);
+      if (!o.warned && gap < speed.current * LEAD_S) {
+        o.warned = true;
+        warnRef.current?.(o.kind);
+      }
+
       if (overlaps(fishHitbox(fishY.current, ducking.current), obstacleHitbox(o.kind, o.x))) {
         setGameOver(true);
         setTick((t) => t + 1);

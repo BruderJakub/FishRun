@@ -1,5 +1,6 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import * as Speech from "expo-speech";
+import { useEffect, useRef, useState } from "react";
 import { GestureResponderEvent, Image, Pressable, StyleSheet, Text, useWindowDimensions, Vibration, View } from "react-native";
 
 import { useGame } from "../context/GameContext";
@@ -11,6 +12,7 @@ import Overlay from "./Overlay";
 import ScrollingLayer from "./ScrollingLayer";
 
 const DEBUG_HITBOX = true; // red outlines + motion value. Set to false when everything feels right.
+const DUCK_HOLD_MS = 800;  // how long a motion-duck lasts
 
 const RUNNING_FRAMES = [
   require("../assets/running_fish/running_fish_0.png"),
@@ -50,12 +52,21 @@ function Box({ rect }: { rect: Rect }) {
 export default function GameWorld({ onGameOver }: Props) {
   const { width, height } = useWindowDimensions();
   const { highScore, settings, submitScore } = useGame();
+
+  const speak = (text: string) => {
+    Speech.stop();
+    Speech.speak(text, { language: "de-DE", rate: 1.15 });
+  };
+
   const {
     obstacle, fishY, jump, duck, stopDuck, isDucking,
     gameOver, paused, setPaused, score, resetGame, bgScroll, floorScroll,
-  } = useGameLoop(width);
+  } = useGameLoop(width, (kind) => {
+    if (settings.voiceHints) speak(kind === "ground" ? "Spring!" : "Duck!");
+  });
 
   const [frame, setFrame] = useState(0);
+  const duckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const active = !gameOver && !paused;
   const o = obstacle.current;
 
@@ -65,7 +76,8 @@ export default function GameWorld({ onGameOver }: Props) {
     onJump: jump,
     onDuck: () => {
       duck();
-      setTimeout(stopDuck, 500); // hold the duck for 0.5 s
+      if (duckTimer.current) clearTimeout(duckTimer.current);
+      duckTimer.current = setTimeout(stopDuck, DUCK_HOLD_MS);
     },
   });
 
@@ -75,7 +87,7 @@ export default function GameWorld({ onGameOver }: Props) {
   };
 
   const handlePress = (e: GestureResponderEvent) => {
-    if (!active) return;
+    if (!active || !settings.touch) return;
     if (e.nativeEvent.pageX < width / 2) jump();
     else duck();
   };
@@ -84,9 +96,21 @@ export default function GameWorld({ onGameOver }: Props) {
     if (gameOver) {
       submitScore(score);
       if (settings.vibration) Vibration.vibrate(150);
+      if (settings.voiceHints) speak(`Game Over. ${score} Punkte.`);
       onGameOver();
     }
   }, [gameOver]);
+
+  useEffect(() => {
+    if (paused) Speech.stop();
+  }, [paused]);
+
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+      if (duckTimer.current) clearTimeout(duckTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!active) return;
@@ -95,7 +119,11 @@ export default function GameWorld({ onGameOver }: Props) {
   }, [active]);
 
   return (
-    <Pressable style={{ flex: 1 }} onPressIn={handlePress} onPressOut={stopDuck}>
+    <Pressable
+      style={{ flex: 1 }}
+      onPressIn={handlePress}
+      onPressOut={settings.touch ? stopDuck : undefined}
+    >
       <View style={styles.container}>
         <ScrollingLayer
           source={require("../assets/sea_background.png")}
