@@ -1,20 +1,40 @@
-import { Image, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
+import useGameLoop from "../hooks/useGameLoop";
 
 export default function GameWorld() {
-  return (
-    <View style={styles.container}>
-        <View style={styles.sky} />
+    const { obstacleX, fishY, jump } = useGameLoop();
+    
+    return (
+        <Pressable
+            style={{ flex: 1 }}
+            onPress={jump}
+        >
+            <View style={styles.container}>
+            <View style={styles.sky} />
 
-        <Image
-            source={require("../assets/fish.png")}
-            style={styles.fish}
-        />
+            <Image
+                source={require("../assets/fish.png")}
+                style={[
+                styles.fish,
+                {
+                    bottom: 80 + fishY,
+                },
+                ]}
+            />
 
-        <View style={styles.obstacle} />
+            <View
+                style={[
+                styles.obstacle,
+                {
+                    left: obstacleX,
+                },
+                ]}
+            />
 
-        <View style={styles.ground} />
-    </View>
-  );
+            <View style={styles.ground} />
+            </View>
+        </Pressable>
+    );
 }
 
 const styles = StyleSheet.create({
@@ -41,7 +61,7 @@ const styles = StyleSheet.create({
 
   obstacle: {
     position: "absolute",
-    right: 150,
+
     bottom: 80,
     width: 50,
     height: 70,
