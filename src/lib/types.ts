@@ -24,7 +24,8 @@ export type Obstacle = {
 export type MotionEvent = "jump" | "duck";
 
 export type Settings = {
-  sensitivity: number;
-  sound: boolean;
+  sensitivity: number; // 0.5 - 2.0
+  motion: boolean;     // Motion Control an/aus
+  sound: boolean;      // folgt später
   vibration: boolean;
 };
