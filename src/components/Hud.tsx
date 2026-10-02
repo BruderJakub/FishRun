@@ -1,13 +1,14 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-type Props = { score: number; best: number; motionActive: boolean; onPause: () => void };
+type Props = { score: number; best: number; motionActive: boolean; multiplier?: number; onPause: () => void };
 
-export default function Hud({ score, best, motionActive, onPause }: Props) {
+export default function Hud({ score, best, motionActive, multiplier = 1, onPause }: Props) {
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       <View style={styles.left}>
         <Text style={styles.score}>Score: {score}</Text>
         <Text style={styles.best}>Best: {best}</Text>
+        {multiplier > 1 && <Text style={styles.mult}>Punkte ×{multiplier}</Text>} 
       </View>
 
       <View style={styles.chip}>
@@ -21,7 +22,7 @@ export default function Hud({ score, best, motionActive, onPause }: Props) {
       </Pressable>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   left: { position: "absolute", top: 16, left: 20 },
@@ -38,4 +39,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#12243A", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
   },
   bar: { width: 5, height: 18, backgroundColor: "#fff", borderRadius: 2 },
+  mult: { fontSize: 14, fontWeight: "bold", color: "#B00020" },
 });

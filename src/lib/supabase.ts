@@ -12,3 +12,4 @@ if (!extra?.supabaseUrl || !extra?.supabasePublishableKey) {
 }
 
 export const supabase = createClient(extra.supabaseUrl, extra.supabasePublishableKey);
+

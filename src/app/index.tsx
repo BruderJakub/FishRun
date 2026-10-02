@@ -1,6 +1,6 @@
 import { router } from "expo-router";
-import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import GameButton from "../components/GameButton";
 import { useGame } from "../context/GameContext";
 
@@ -9,6 +9,9 @@ export default function Start() {
   const [input, setInput] = useState(playerName);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Feld folgt dem gespeicherten Namen (z. B. wenn die Zeile im Dashboard gelöscht wurde)
+  useEffect(() => setInput(playerName), [playerName]);
 
   const save = async () => {
     setBusy(true);
@@ -25,7 +28,11 @@ export default function Start() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>FishRun</Text>
+        <Image source={require("../assets/fish.png")} style={styles.fish} resizeMode="contain" />
+
+        <Text style={styles.title}>
+          Fish<Text style={styles.run}>Run</Text>
+        </Text>
         <Text style={styles.tag}>Move your phone, move your fish.</Text>
 
         <View style={styles.nameBox}>
@@ -61,7 +68,9 @@ export default function Start() {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, backgroundColor: "#12243A", alignItems: "center", justifyContent: "center", gap: 14, padding: 24 },
+  fish: { width: 160, height: 120 },
   title: { color: "#fff", fontSize: 44, fontWeight: "bold" },
+  run: { color: "#ED1C24" },
   tag: { color: "#DCE6F2", fontStyle: "italic", marginBottom: 8 },
   nameBox: { width: 240, gap: 8, marginBottom: 8 },
   label: { color: "#9FB3C8", fontSize: 13, fontWeight: "bold" },

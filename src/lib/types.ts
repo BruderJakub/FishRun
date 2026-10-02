@@ -23,11 +23,16 @@ export type Obstacle = {
 
 export type MotionEvent = "jump" | "duck";
 
+export type Difficulty = "normal" | "hard";
+
 export type Settings = {
-  sensitivity: number; // 0.5 - 2.0
-  touch: boolean;      // Touch-Steuerung
-  motion: boolean;     // Bewegungssteuerung
-  voiceHints: boolean; // Blind-Modus: Sprachhinweise
-  sound: boolean;      // folgt später
+  sensitivity: number;
+  touch: boolean;
+  motion: boolean;
+  motionMode: "phone" | "body";
+  voiceHints: boolean;
+  sound: boolean;
   vibration: boolean;
+  showHitboxes: boolean;
+  difficulty: Difficulty;
 };

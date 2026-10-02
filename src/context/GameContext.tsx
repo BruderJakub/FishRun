@@ -4,7 +4,11 @@ import { supabase } from "../lib/supabase";
 import { Settings } from "../lib/types";
 
 const KEY = "fishrun:data";
-const DEFAULT_SETTINGS: Settings = { sensitivity: 1, touch: true, motion: true, voiceHints: false, sound: true, vibration: true };
+const DEFAULT_SETTINGS: Settings = {
+  sensitivity: 1, touch: true, motion: true, motionMode: "phone",
+  voiceHints: false, sound: true, vibration: true, showHitboxes: false,
+  difficulty: "normal",
+};
 
 const newId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -53,6 +57,37 @@ export function GameProvider({ children }: { children: ReactNode }) {
     );
   }, [highScore, playerName, playerId, settings, loaded]);
 
+  // Fragt den Server nach meiner Zeile: null = offline/Fehler, sonst exists + score
+  const fetchPlayer = useCallback(async (): Promise<{ exists: boolean; score: number } | null> => {
+    try {
+      const { data, error } = await supabase.rpc("get_player", { p_id: playerId });
+      if (error) {
+        console.warn("Supabase error:", error.message);
+        return null;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      return row ? { exists: true, score: row.score ?? 0 } : { exists: false, score: 0 };
+    } catch (e) {
+      console.warn("Network error:", e);
+      return null;
+    }
+  }, [playerId]);
+
+  // Beim App-Start abgleichen: Zeile gelöscht -> Name und Highscore zurücksetzen
+  useEffect(() => {
+    if (!loaded || !playerId || !playerName) return;
+    (async () => {
+      const server = await fetchPlayer();
+      if (!server) return;
+      if (!server.exists) {
+        setPlayerName("");
+        setHighScore(0);
+      } else {
+        setHighScore(server.score);
+      }
+    })();
+  }, [loaded, playerId]); // bewusst nur einmal pro Start
+
   const pushScore = useCallback(
     async (name: string, score: number) => {
       if (!name || score <= 0) return false;
@@ -73,11 +108,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const submitScore = useCallback(
     async (score: number) => {
-      const finalScore = Math.max(score, highScore); // synct auch Offline-Scores
-      if (score > highScore) setHighScore(score);
-      return pushScore(playerName, finalScore);
+      let name = playerName;
+      let base = highScore;
+
+      const server = await fetchPlayer();
+      if (server && name && !server.exists) {
+        // Zeile wurde im Dashboard gelöscht: Name und alter Highscore sind ungültig
+        name = "";
+        base = 0;
+        setPlayerName("");
+      } else if (server && server.exists) {
+        base = server.score; // Server ist die Wahrheit
+      }
+
+      const finalScore = Math.max(score, base);
+      setHighScore(finalScore);
+      return pushScore(name, finalScore);
     },
-    [highScore, playerName, pushScore]
+    [highScore, playerName, fetchPlayer, pushScore]
   );
 
   const setName = useCallback(

@@ -6,13 +6,13 @@ import { GestureResponderEvent, Image, Pressable, StyleSheet, Text, useWindowDim
 import { useGame } from "../context/GameContext";
 import useGameLoop from "../hooks/useGameLoop";
 import useMotionControl from "../hooks/useMotionControl";
-import { DIVER, FISH_BOTTOM, FISH_X, fishHitbox, GROUND_HEIGHT, obstacleHitbox, Rect, ROCK } from "../lib/gameLogic";
+import { DIVER, FISH_BOTTOM, FISH_X, fishHitbox, GROUND_HEIGHT, HOOK, obstacleHitbox, Rect, ROCK, scoreMultiplier } from "../lib/gameLogic";
 import Hud from "./Hud";
 import Overlay from "./Overlay";
 import ScrollingLayer from "./ScrollingLayer";
 
-const DEBUG_HITBOX = true; // red outlines + motion value. Set to false when everything feels right.
-const DUCK_HOLD_MS = 800;  // how long a motion-duck lasts
+
+const DUCK_HOLD_MS = 800; // wie lange ein Bewegungs-Ducken dauert
 
 const RUNNING_FRAMES = [
   require("../assets/running_fish/running_fish_0.png"),
@@ -58,30 +58,50 @@ export default function GameWorld({ onGameOver }: Props) {
     Speech.speak(text, { language: "de-DE", rate: 1.15 });
   };
 
-  const {
+  const motionOnly = settings.motion && !settings.touch;
+    const multiplier = scoreMultiplier(settings.difficulty, motionOnly);
+
+    const {
     obstacle, fishY, jump, duck, stopDuck, isDucking,
     gameOver, paused, setPaused, score, resetGame, bgScroll, floorScroll,
-  } = useGameLoop(width, (kind) => {
-    if (settings.voiceHints) speak(kind === "ground" ? "Spring!" : "Duck!");
-  });
+    } = useGameLoop(
+    width,
+    (kind) => {
+        if (settings.voiceHints) speak(kind === "ground" ? "Jump!" : kind === "overhead" ? "Duck!" : "Hook!");
+    },
+    settings.difficulty,
+    multiplier
+    );
 
   const [frame, setFrame] = useState(0);
   const duckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const active = !gameOver && !paused;
   const o = obstacle.current;
 
+  const clearDuckTimer = () => {
+    if (duckTimer.current) clearTimeout(duckTimer.current);
+    duckTimer.current = null;
+  };
+
   const { delta } = useMotionControl({
     enabled: active && settings.motion,
+    mode: settings.motionMode,
     sensitivity: settings.sensitivity,
-    onJump: jump,
+    debug: settings.showHitboxes,
+    onJump: () => {
+      clearDuckTimer();
+      stopDuck(); // ein Sprung bricht ein laufendes Ducken ab (man geht vor dem Sprung oft in die Knie)
+      jump();
+    },
     onDuck: () => {
       duck();
-      if (duckTimer.current) clearTimeout(duckTimer.current);
+      clearDuckTimer();
       duckTimer.current = setTimeout(stopDuck, DUCK_HOLD_MS);
     },
   });
 
   const pause = () => {
+    clearDuckTimer();
     stopDuck();
     setPaused(true);
   };
@@ -108,7 +128,7 @@ export default function GameWorld({ onGameOver }: Props) {
   useEffect(() => {
     return () => {
       Speech.stop();
-      if (duckTimer.current) clearTimeout(duckTimer.current);
+      clearDuckTimer();
     };
   }, []);
 
@@ -139,10 +159,31 @@ export default function GameWorld({ onGameOver }: Props) {
           style={[styles.fish, { bottom: FISH_BOTTOM + fishY }, isDucking && styles.fishDucking]}
         />
 
-        {o.kind === "ground" ? (
-          <Image source={require("../assets/rock.png")} resizeMode="contain" style={[styles.rock, { left: o.x }]} />
-        ) : (
-          <Image source={require("../assets/diver.png")} resizeMode="contain" style={[styles.diver, { left: o.x }]} />
+        {o.kind === "ground" && (
+        <Image source={require("../assets/rock.png")} resizeMode="contain" style={[styles.rock, { left: o.x }]} />
+        )}
+        {o.kind === "overhead" && (
+        <Image source={require("../assets/diver.png")} resizeMode="contain" style={[styles.diver, { left: o.x }]} />
+        )}
+        {o.kind === "hook" && (
+            <View
+                pointerEvents="none"
+                style={{
+                position: "absolute",
+                left: o.x,
+                bottom: o.hookY,
+                width: HOOK.width,
+                height: Math.min(HOOK.height, height - o.hookY - 4),
+                overflow: "hidden",
+                zIndex: 5,
+                }}
+            >
+                <Image
+                source={require("../assets/hook.png")}
+                resizeMode="stretch"
+                style={{ position: "absolute", bottom: 0, left: 0, width: HOOK.width, height: HOOK.height}}
+                />
+            </View>
         )}
 
         <ScrollingLayer
@@ -154,19 +195,22 @@ export default function GameWorld({ onGameOver }: Props) {
           zIndex={2}
         />
 
-        {DEBUG_HITBOX && (
+        {settings.showHitboxes && (
           <>
             <Box rect={fishHitbox(fishY, isDucking)} />
-            <Box rect={obstacleHitbox(o.kind, o.x)} />
-            <Text style={styles.debug}>motion: {delta.toFixed(2)}</Text>
+            <Box rect={obstacleHitbox(o.kind, o.x, o.hookY)} />
+            <Text style={styles.debug}>
+              {settings.motionMode === "body" ? "body" : "phone"}: {delta.toFixed(2)}
+            </Text>
           </>
         )}
 
         <Hud
-          score={score}
-          best={Math.max(highScore, score)}
-          motionActive={active && settings.motion}
-          onPause={pause}
+            score={score}
+            best={Math.max(highScore, score)}
+            motionActive={active && settings.motion}
+            multiplier={multiplier}
+            onPause={pause}
         />
 
         {(gameOver || paused) && (
@@ -187,9 +231,9 @@ export default function GameWorld({ onGameOver }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   fish: { position: "absolute", left: FISH_X, width: 100, height: 100, zIndex: 10, transform: [{ scaleX: -1 }] },
-  // temporary "duck" look until the real duck animation exists (Block 9)
+  // temporärer "Duck"-Look, bis die echte Duck-Animation da ist (Block 9)
   fishDucking: { transform: [{ translateY: 20 }, { scaleX: -1 }, { scaleY: 0.6 }] },
   rock: { position: "absolute", bottom: GROUND_HEIGHT, width: ROCK.width, height: ROCK.height, zIndex: 5 },
   diver: { position: "absolute", bottom: DIVER.bottom, width: DIVER.width, height: DIVER.height, zIndex: 5 },
-  debug: { position: "absolute", top: 80, left: 20, zIndex: 50 },
+  debug: { position: "absolute", top: 64, right: 20, zIndex: 50 },
 });
